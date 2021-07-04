@@ -7,6 +7,7 @@ key = input()
 class Weather:
     def __init__(self):
         self.response = []
+        self.is_it_rain = {}
 
     def get_response(self, key):
         url = "https://visual-crossing-weather.p.rapidapi.com/forecast"
@@ -17,7 +18,7 @@ class Weather:
             'x-rapidapi-host': "visual-crossing-weather.p.rapidapi.com"
         }
         self.response = requests.request("GET", url, headers=headers, params=querystring).json()
-        print(self.response)
+        #print(self.response)
 
     def load_response(self,key, file):
         sec = getmtime(file)
@@ -25,19 +26,35 @@ class Weather:
         if now - sec < (60*60*24):
             with open(file, "r") as f:
                 self.response = json.load(f)
-            print("Dane z pliku")
+            print("*Pobrane dane z pliku*")
         else:
             self.get_response(key)
             self.save_response(file)
-        return True
 
     def save_response(self, file):
         with open(file, "w") as fp:
             file_content_json = json.dumps(self.response)
             fp.write(file_content_json)
+        return True
+
+    def forecast(self):
+        for current_value in self.response["locations"]["Washington,DC,USA"]["values"]:
+            date = datetime.utcfromtimestamp(current_value["datetime"]/1000).strftime("%Y-%m-%d")
+            forecast = current_value["conditions"]
+            self.is_it_rain[date] = forecast
+
+    def __getitem__(self, item):
+        if item not in self.is_it_rain:
+            return "Nie wiem"
+        if "Rain" in self.is_it_rain[item]:
+            return "Będzie padać"
+        else:
+            return "Nie będzie padać"
+
 
 weather = Weather()
 outfile = sys.argv[1]
 weather.load_response(key, outfile)
-#weather.get_response(key)
-#weather.save_response(outfile)
+weather.forecast()
+dict = weather.is_it_rain
+print(weather[sys.argv[2]])
